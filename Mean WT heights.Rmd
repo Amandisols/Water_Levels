@@ -1,0 +1,51 @@
+---
+title: "Mean WT heights"
+author: "Amanda Pennino"
+date: "12/16/2020"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+```
+
+LATWAG wells
+```{r}
+#Wells where water samples were taken and wells that we nearest to described soil pits.
+#Missing 52_4_d2, 86_2_s1
+NAMES = list('42_2_s1','42_3_s1','42_3_s2','42_3_s3','42_4_s1','42_4_s2','42_4_s3','42_4_d1','42_4_d2','52_2_s1','52_3_s1','52_3_s2','52_3_s3','52_4_s1','52_4_s2','52_4_s3','52_4_d1','86_3_s1', '86_3_s2', '86_3_s3','86_4_s1_JB', '86_4_s2', '86_4_s3')
+
+wellDatasList <- list()
+
+for (well in NAMES){
+  wellDatasList[[well]] <- read_csv(paste(well,"csv", sep = "."))
+}
+
+#add the well name column for each well's data table
+i <- 1
+wellsWNamesList <- list()
+for (well in wellDatasList){
+  wellsWNamesList[[i]] <- well %>% mutate(Well = NAMES[[i]])
+  i <- i + 1
+}
+
+#one table
+allWellData <- do.call(rbind, wellsWNamesList)
+
+
+AVERAGES <- allWellData %>%
+  group_by(Well) %>%
+  summarise_at(.vars = vars(`Water Level`), .funs = mean, na.rm = TRUE) 
+```
+
+```{r}
+
+WT1 = read.csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_2_s1.csv") 
+WT2 = read.csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s3.csv") 
+
+```
+
+
+

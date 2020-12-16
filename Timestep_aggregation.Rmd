@@ -1,0 +1,96 @@
+---
+title: "Time aggregation"
+author: "Amanda Pennino"
+date: "12/16/2020"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+library(zoo)
+```
+
+```{r}
+WT_422s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_2_s1.csv") 
+WT_423s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s1.csv") 
+WT_423s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s2.csv") 
+WT_423s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s3.csv") 
+WT_424s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s1.csv") 
+WT_424s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s2.csv") 
+WT_424s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s3.csv") 
+WT_424d1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_d1.csv") 
+WT_424d2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_d2.csv") 
+WT_522s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_2_s1.csv") 
+WT_523s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_3_s1.csv") 
+WT_523s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_3_s2.csv") 
+WT_523s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_3_s3.csv") 
+WT_524s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_4_s1.csv") 
+WT_524s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_4_s2.csv") 
+WT_524s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_4_s3.csv") 
+WT_524d1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_4_d1.csv") 
+#WT_524d1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_4_d2.csv") 
+#WT_862s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_2_s1.csv")
+WT_863s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_3_s1.csv")
+WT_863s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_3_s2.csv")
+WT_863s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_3_s3.csv")
+WT_864s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_4_s1_JB.csv") 
+WT_864s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_4_s2.csv") 
+WT_864s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/86_4_s3.csv") 
+
+#Fix the weird nonsense with the first well's DateTime format.
+WT_422s1 <- WT_422s1 %>% mutate(DateTime = mdy_hm(`Date Time`))
+WT_422s1 <- WT_422s1[,-2]
+names(WT_422s1)[4]<-"Water Level"
+
+```
+
+##Functions.
+```{r}
+
+agg <- function(x) {
+  WT.zoo <- zoo(x$`Water Level`, order.by = x$`Date Time`)
+  WT.agg <- aggregate(WT.zoo, time(WT.zoo) - as.numeric(time(WT.zoo)) %% 600, mean)
+  df <- as.data.frame(WT.agg) 
+  df$DateTime <- time(WT.agg) #create a date column
+  rownames(df) <- NULL 
+  df <- df[,c(ncol(df), 1:(ncol(df)-1))] #reorder columns so Date first
+  names(df)[2]<-"Water.Level"
+  return(df)
+}
+
+
+```
+
+
+```{r}
+
+WT_422s1 = agg(42_2_s1)
+WT_423s1 = agg(42_3_s1) 
+WT_423s2 = agg(42_3_s2) 
+WT_423s3 = agg(42_3_s3) 
+WT_424s1 = agg(42_4_s1) 
+WT_424s2 = agg(42_4_s2) 
+WT_424s3 = agg(42_4_s3) 
+WT_424d1 = agg(42_4_d1) 
+WT_424d2 = agg(42_4_d2) 
+WT_522s1 = agg(52_2_s1) 
+WT_523s1 = agg(52_3_s1) 
+WT_523s2 = agg(52_3_s2) 
+WT_523s3 = agg(52_3_s3) 
+WT_524s1 = agg(52_4_s1) 
+WT_524s2 = agg(52_4_s2) 
+WT_524s3 = agg(52_4_s3) 
+WT_524d1 = agg(52_4_d1) 
+#WT_524d1 = agg(52_4_d2) 
+#WT_862s1 = agg(86_2_s1)
+WT_863s1 = agg(86_3_s1)
+WT_863s2 = agg(86_3_s2)
+WT_863s3 = agg(86_3_s3)
+WT_864s1 = agg(86_4_s1_JB) 
+WT_864s2 = agg(86_4_s2) 
+WT_864s3 = agg(86_4_s3) 
+
+```
+
