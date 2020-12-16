@@ -106,7 +106,7 @@ write_csv(WT_424s3, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels
 write_csv(WT_424d1, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/42_4_d1.csv") 
 write_csv(WT_424d2, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/42_4_d2.csv") 
 write_csv(WT_522s1, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/52_2_s1.csv") 
-write_csv(WT_523s1, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/52_3s1.csv") 
+write_csv(WT_523s1, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/52_3_s1.csv") 
 write_csv(WT_523s2, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/52_3_s2.csv") 
 write_csv(WT_523s3, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/52_3_s3.csv") 
 write_csv(WT_524s1, "~/Documents/VT/Data/MyData/Wells/TimeSeriesData/WaterLevels/Aggregated_10min/52_4_s1.csv") 
