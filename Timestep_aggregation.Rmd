@@ -65,6 +65,7 @@ agg <- function(x) {
 
 
 ```{r}
+
 WT_422s1 = agg(WT_422s1)
 WT_423s1 = agg(WT_423s1) 
 WT_423s2 = agg(WT_423s2) 
@@ -90,6 +91,7 @@ WT_863s3 = agg(WT_863s3)
 WT_864s1 = agg(WT_864s1) 
 WT_864s2 = agg(WT_864s2) 
 WT_864s3 = agg(WT_864s3) 
+
 
 
 ```
