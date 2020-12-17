@@ -16,10 +16,10 @@ library(zoo)
 WT_422s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_2_s1.csv") 
 WT_423s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s1.csv") 
 WT_423s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s2.csv") 
-WT_423s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s3.csv") 
+WT_423s3 = read.csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_3_s3.csv") 
 WT_424s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s1.csv") 
 WT_424s2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s2.csv") 
-WT_424s3 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s3.csv") 
+WT_424s3 = read.csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_s3.csv") 
 WT_424d1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_d1.csv") 
 WT_424d2 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/42_4_d2.csv") 
 WT_522s1 = read_csv("~/Documents/VT/Data/Benton/TimeSeriesData/52_2_s1.csv") 
@@ -60,6 +60,18 @@ agg <- function(x) {
   return(df)
 }
 
+agg2 <- function(x){
+  x$Date.Time <- as.POSIXct(x$Date.Time, format = "%m/%d/%y %H:%M") 
+  WT.zoo <- zoo(x$Water.Level, order.by = x$`Date.Time`)
+  WT.agg <- aggregate(WT.zoo, time(WT.zoo) - as.numeric(time(WT.zoo)) %% 600, mean)
+  df <- as.data.frame(WT.agg) 
+  df$DateTime <- time(WT.agg) #create a date column
+  rownames(df) <- NULL 
+  df <- df[,c(ncol(df), 1:(ncol(df)-1))] #reorder columns so Date first
+  names(df)[2]<-"Water.Level"
+  return(df)
+}
+
 
 ```
 
@@ -69,10 +81,10 @@ agg <- function(x) {
 WT_422s1 = agg(WT_422s1)
 WT_423s1 = agg(WT_423s1) 
 WT_423s2 = agg(WT_423s2) 
-WT_423s3 = agg(WT_423s3) 
+WT_423s3 = agg2(WT_423s3) #note, function 2.
 WT_424s1 = agg(WT_424s1) 
 WT_424s2 = agg(WT_424s2) 
-WT_424s3 = agg(WT_424s3) 
+WT_424s3 = agg2(WT_424s3) 
 WT_424d1 = agg(WT_424d1) 
 WT_424d2 = agg(WT_424d2) 
 WT_522s1 = agg(WT_522s1) 
@@ -91,6 +103,7 @@ WT_863s3 = agg(WT_863s3)
 WT_864s1 = agg(WT_864s1) 
 WT_864s2 = agg(WT_864s2) 
 WT_864s3 = agg(WT_864s3) 
+
 
 ```
 
