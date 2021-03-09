@@ -1,0 +1,173 @@
+---
+title: "Hydrometrics"
+author: "Amanda Pennino"
+date: "2/24/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+#Read in well data
+```{r}
+
+#set directory  to csvs
+setwd("~/Documents/VT/Data/MyData/Code/Water_Levels/")
+
+WELLS = list('52_2_s1', '52_3_s3', '52_4_s1')
+
+#read in all csv into a list
+WellsList <- list()
+
+for (well in WELLS){
+  WellsList[[well]] <- read_csv(paste(well, "csv", sep = "."), col_types = cols(
+  `X1` = col_number(),
+  `Date Time` = col_datetime(format = ""),
+  `Water Level` = col_number(),
+  `Water Temperature` = col_number()
+))
+}
+
+
+i <- 1
+WellsNameList <- list()
+for (well in WellsList){
+  WellsList[[i]] <- well %>% mutate(Well = WELLS[[i]])
+  i <- i + 1
+}
+
+#Master data table
+WellDataAll <- do.call(rbind, WellsList)
+
+#plot to check well data
+WellDataAll %>%
+  ggplot(aes(x = `Date Time`, y = -`Water Level`)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "red", size=0.5) +
+  ylab("Water depth from surface (m)") +
+  ggtitle("Subcatchment 52") +
+  theme_bw() +
+  facet_wrap(facets = "Well", nrow = 3, scales = "free") +
+  labs(subtitle = "Dotted line = soil surface")+
+  ylab("Water table height (cm)") 
+
+```
+
+
+#Thats cute, but do all wells look this clean?
+```{r}
+
+well <- read_csv("42_2_s1.csv", 
+                 col_types = list(`Date Time` = col_datetime(format = "%m/%d/%Y %H:%M")))
+
+
+well %>%
+  ggplot(aes(x = `Date Time`, y = -`Water Level (meters)`)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "red", size=0.5) +
+  ylab("Water depth from surface (m)") +
+  ggtitle("42_2_s1: flooding???") +
+  theme_bw() +
+  labs(subtitle = "Dotted line = soil surface")+
+  ylab("Water table height (cm)") 
+
+```
+
+
+#What is the annual average height of the water table?
+```{r}
+
+WellDataAll %>%
+  filter(`Date Time` >= ymd_hms("2019-06-27 00:00:00")) %>%
+  mutate(month = month(`Date Time`)) %>%
+  group_by(Well) %>%
+  summarise(mean_mo = mean(`Water Level`, na.rm = TRUE))
+
+```
+
+
+#Duration/Persistance
+##How many days in a year is water in the well? 
+##How many days was the water level within 10cm of the surface?
+```{r}
+WellDataAll %>%
+  filter(`Date Time` > ymd_hms("2019-06-29 00:00:00")) %>%
+  mutate(Date = as.Date(`Date Time`)) %>% 
+  drop_na() %>%
+  group_by(Well, Date) %>%
+  summarize(day_mean = mean(`Water Level`)) %>%
+  group_by(Well) %>%
+  tally
+
+
+WellDataAll %>%
+  filter(`Date Time` > ymd_hms("2019-06-29 00:00:00"), `Water Level` <= 10) %>%
+  mutate(Date = as.Date(`Date Time`)) %>% 
+  drop_na() %>%
+  group_by(Well, Date) %>%
+  summarize(day_mean = mean(`Water Level`)) %>%
+  group_by(Well) %>%
+  tally
+```
+
+
+
+
+
+#RBI (flashiness)
+```{r}
+
+#Get Gage Data via the dataRetrieval package from USGS 01187300 2013 -->
+# data.gage <- dataRetrieval::readNWISdv("03238500"
+#                                         , "00060"
+#                                        , "1974-10-01"
+#                                        , "1975-09-30")
+# head(data.gage)
+# #' # flow data
+# data.Q <- data.gage[,4]
+# #' # remove zeros
+# data.Q[data.Q==0] <- NA
+# RBIcalc(data.Q)
+# 
+# 
+# 
+# 
+# 
+# #Q: discharge
+# 
+# RBIcalc <- function(Q){##FUNCTION.RBIcalc.START
+#   #
+#   time.start <- proc.time()
+#   #
+#   # Size
+#   myLen <- length(Q)
+#   # Add previous record in second column
+#   Qprev <- c(NA,Q[-myLen])
+#   # Create dataframe.
+#   myData <- as.data.frame(cbind(Q,Qprev))
+#   # delta (absolute)
+#   myData[,"AbsDelta"] <- abs(myData[,"Q"] - myData[,"Qprev"])
+#   # SumQ
+#   SumQ <- sum(myData[,"Q"],na.rm=TRUE)
+#   # Sum Delta
+#   SumDelta <- sum(myData[,"AbsDelta"], na.rm=TRUE)
+#   #
+#   RBIsum <- SumDelta / SumQ
+#   #
+#   time.elaps <- proc.time()-time.start
+#   # cat(c("Rarify of samples complete. \n Number of samples = ",nsamp,"\n"))
+#   # cat(c(" Execution time (sec) = ", elaps[1]))
+#   # flush.console()
+#   #
+#   # Return RBI value for data submitted.
+#   return(RBIsum)
+#   #
+# }
+
+```
+
+

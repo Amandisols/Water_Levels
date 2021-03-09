@@ -1,0 +1,163 @@
+---
+title: "Processing raw HOBO pressure data to water depth"
+author: "Amanda Pennino"
+email: "penninoa@vt.edu"
+date: "2021-03-08"
+---
+
+Set up
+```{r}
+library(tidyverse)
+library(lubridate)
+library(data.table)
+
+#Convert all raw .hobo files in HOBO software to .csv through batch export. Save in "Raw" under date the files were downloaded.
+csv_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv"
+out_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Processed"
+
+#Download date, determines csv folder within "Raw"
+dl_date = "2019_05_22"
+
+
+#Read in manual log
+
+```
+
+Download function
+```{r}
+
+#For one well at a time
+
+# download_fxn <-function(path, dl_date, well){
+#   DATA <- read_csv(paste(path, dl_date, well, sep = "/"), skip = 1, col_types = list(`Date Time, GMT-04:00` = col_datetime(format = "%m/%d/%y %H:%M:%S %p")))
+#    
+#   names(DATA)[1]<-"Id"
+#   names(DATA)[2]<-"DateTime"
+#   names(DATA)[3]<-"Pressure_kPa"
+#   names(DATA)[4]<-"Temp_C"
+#   
+#   DATA %>% select("Id", "DateTime", "Pressure_kPa", "Temp_C")
+# }
+#   
+
+
+#For the whole folder
+
+file_paths <- fs::dir_ls(paste(csv_dir, dl_date, sep = "/"))
+#file_contents <- list()
+
+
+##FOR LOOP OPTION
+# for (i in seq_along(file_paths)) {
+#   file_contents[[i]] <- read_csv(file = file_paths[[i]], skip = 1, col_types = list(`Date Time, GMT-04:00` = col_datetime(format = "%m/%d/%y %H:%M:%S %p")))
+#   
+# }
+# 
+# file_contents <- set_names(file_contents, file_paths)
+# 
+# c<- file_contents$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2019_05_22/86_3_s2.csv`
+# 
+
+
+
+
+###PURR OPTION
+c<- file_paths %>%
+    map(function (path) {
+        read_csv(path, skip = 1, col_types = list(`Date Time, GMT-04:00` = col_datetime(format = "%m/%d/%y %H:%M:%S %p")))
+    })
+
+
+
+colnames <- c("Id", "DateTime", "Pressure_kPa", "Temp_C") 
+c <- lapply(c, setNames, colnames)
+
+
+```
+
+Read in raw pressure data
+```{r}
+
+baro <- download_fxn(csv_dir, dl_date, "Barometric.csv") 
+well <- download_fxn(csv_dir, dl_date, "42_2_s1.csv")
+
+
+
+```
+
+Interpolation 
+```{r}
+
+#Interpolation function
+baro_fun <-approxfun(baro$DateTime, baro$Pressure_kPa, method = "linear")
+
+
+df <- well %>% 
+  #Interpolate barometric pressure from loggers
+  mutate(pressureBaro = baro_fun(DateTime)) %>% 
+  #Clean up
+  select(DateTime, Pressure_kPa, pressureBaro)
+
+
+df <-df %>% 
+  mutate(pressureGauge = Pressure_kPa - pressureBaro, 
+         waterHeight   = pressureGauge/9.81)
+
+#Estimate waterdepth
+offset = -0.1813 #for October
+df <-df %>% mutate(waterDepth = waterHeight + offset)
+
+
+df <-  df %>% mutate(waterDepth2 = replace(waterDepth, waterDepth < -.303, NA))
+
+df %>%
+  ggplot(aes(x = DateTime, y = waterHeight)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "red", size=0.5) +
+  ylab("Water table height (m)") +
+  ggtitle("Depth to logger: .30 m") +
+  theme_classic(base_size = 14) 
+
+df %>%
+  ggplot(aes(x = DateTime, y = waterDepth2)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "red", size=0.5) +
+  ylab("Depth (m)") +
+  ggtitle("Depth to Water table") +
+  theme_classic(base_size = 14) 
+
+
+df %>%
+  ggplot(aes(x = Pressure_kPa, y = pressureBaro, color = DateTime)) +
+  geom_point() +
+  theme_classic()
+
+
+
+```
+
+
+```{r}
+
+x <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/42_2_s1.csv", col_types = list(`Date Time` = col_datetime(format = "%m/%d/%Y %H:%M")))
+
+
+
+
+x %>%
+  filter(`Date Time` > "2019-07-19 00:00:00" & `Date Time` < "2019-10-03 00:00:00") %>%
+  ggplot(aes(x = `Date Time`, y = -`Water Level (meters)`)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype="dashed", 
+                color = "red", size=0.5) +
+  ylab("Water depth from surface (m)") +
+  ggtitle("42_2_s1: flooding???") 
+  theme_classic() +
+  labs(subtitle = "Dotted line = soil surface")+
+  ylab("Water table height (cm)") 
+
+```
+
+
