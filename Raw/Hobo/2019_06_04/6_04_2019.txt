@@ -1,0 +1,20 @@
+Well ID, Water Level (ft), Time, Comment
+42-4-s2, 5.87, 2:08pm
+42-4-s3, 5.30, 2:19pm
+42-4-s1, 6.06, 2:30pm, Emptys
+42-4-d2, 8.17, 3:10pm
+42-4-d1, 6.67, 3:28pm
+42-3-s3, 0, 3:52pm, Emptys
+42-3-s2, 0, 4:04pm, Emptys
+42-3-s1, 0, 4:07pm, Emptys
+42-2-s1, 0, 4:13pm, Emptys
+52-4-s2, 4.87, 4:26pm
+52-4-s3, 4.86, 4:34pm
+52-4-s1, 5.26, 4:39pm
+52-3-s3, 4.87, 4:44pm
+52-3-s1, 4.94, 4:50pm
+52-3-s2, 0, 4:53pm, Emptys
+52-2-s1, 3.70, 4:59pm, Very shallow water table removed logger to record water table
+52-4-d1, 4.79, 5:08pm
+86-3-d2, 4.25, 5:39pm, slug test 
+

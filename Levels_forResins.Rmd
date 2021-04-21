@@ -1,0 +1,58 @@
+---
+title: "Resin_AvgLevels"
+author: "Amanda Pennino"
+date: "3/30/2021; 4/21/2021"
+output: html_document
+---
+
+```{r echo = FALSE}
+
+library(tidyverse)
+library(lubridate)
+
+```
+
+```{r}
+
+DATE1 = "2019-08-12 00:00:00"
+DATE2 = "2019-10-03 00:00:00"
+DATE3 = "2020-01-27 00:00:00"
+DATE4 = "2020-05-20 00:00:00"
+DATE5 = "2020-08-12 00:00:00"
+
+```
+
+```{r}
+df <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s2/2020_06_27.csv", col_types = list(waterDepth_m = col_double(), 
+     waterHeight_m = col_double()))
+
+plot(df$DateTime, df$waterDepth_m, type = "l")
+
+
+#Average depth to water table, cm
+DEP1 <- df %>% filter(DateTime <= DATE2 & DateTime >= DATE1)
+DEP2 <- df %>% filter(DateTime <= DATE3 & DateTime >= DATE2)
+DEP3 <- df %>% filter(DateTime <= DATE4 & DateTime >= DATE3)
+DEP4 <- df %>% filter(DateTime <= DATE5 & DateTime >= DATE4)
+
+plot(DEP4$DateTime, DEP4$waterHeight_m)
+
+meanDepth1 <- mean(DEP1$waterDepth_m, na.rm = TRUE)*100
+meanDepth2 <- mean(DEP2$waterDepth_m, na.rm = TRUE)*100
+meanDepth3 <- mean(DEP3$waterDepth_m, na.rm = TRUE)*100
+meanDepth4 <- mean(DEP4$waterDepth_m, na.rm = TRUE)*100
+
+meanHeight1 <- mean(DEP1$waterHeight_m, na.rm = TRUE)*100
+meanHeight2 <- mean(DEP2$waterHeight_m, na.rm = TRUE)*100
+meanHeight3 <- mean(DEP3$waterHeight_m, na.rm = TRUE)*100
+meanHeight4 <- mean(DEP4$waterHeight_m, na.rm = TRUE)*100
+
+
+#Average height above resin 
+# RESINHEIGHT = 0.0508
+# df2 <- df %>% filter(waterHeight2 > RESINHEIGHT)
+
+
+
+```
+

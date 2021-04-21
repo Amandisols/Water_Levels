@@ -3,161 +3,339 @@ title: "Processing raw HOBO pressure data to water depth"
 author: "Amanda Pennino"
 email: "penninoa@vt.edu"
 date: "2021-03-08"
+editor_options: 
+  chunk_output_type: console
 ---
 
-Set up
+
+##Set up workspace
 ```{r}
 library(tidyverse)
 library(lubridate)
 library(data.table)
 
+```
+
+
+```{r}
 #Convert all raw .hobo files in HOBO software to .csv through batch export. Save in "Raw" under date the files were downloaded.
+
 csv_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv"
-out_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Processed"
-
-#Download date, determines csv folder within "Raw"
-dl_date = "2019_05_22"
 
 
-#Read in manual log
+#Read in log of manual field measurements.
+key <- read_csv("key.csv")
+wellInfo <- read_csv("wellInfo.csv")
+log <- read_csv("FieldLog.csv", col_types = list(DateTime = col_datetime(format = "%m/%d/%y %H:%M")))
+
+
+#Convert manual water depth measurements to height, do some funky stuff for the dry wells. 
+log <- left_join(log, wellInfo, by = "Well")
+log$RSWL_m[log$RSWL_m == 0.000] <- 999
+log <-log %>%
+  mutate(manualHeight = WellDepth - (RSWL_m - RSG_m))
+log$manualHeight[log$manualHeight < 0] <- 0
+
+
+#Determine offset value using baroPT and wellPT that ends with manual log date.
+offset_fun <- function(WELL, DATE, baroPT, wellPT, log) {
+  
+  baro_fun <- approxfun(baroPT$DateTime, baroPT$Pressure_kPa, method = "linear") 
+  
+  wellPT <- wellPT %>% 
+  mutate(pressureBaro = baro_fun(DateTime)) %>% 
+  select(DateTime, Pressure_kPa, pressureBaro) %>%
+  na.omit() 
+  
+  df <- wellPT %>% 
+    mutate(pressureGauge = Pressure_kPa - pressureBaro, 
+           waterHeight   = pressureGauge/9.81) 
+  
+  WHcol <- df$waterHeight
+  last <- tail(WHcol, 1) 
+  
+  log$DateTime <- as.Date(log$DateTime)
+  manual_height <- log$manualHeight[log$DateTime == ymd(DATE) & log$Well == WELL]
+  offset = manual_height - last
+  
+  return(offset)
+  
+}
+
+
+
+#processing function
+pt_fun <- function(baroPT, wellPT, offset, wellInfo) {
+  baro_fun <- approxfun(baroPT$DateTime, baroPT$Pressure_kPa, method = "linear") 
+  
+  wellPT <- wellPT %>% 
+  mutate(pressureBaro = baro_fun(DateTime)) %>% 
+  select(DateTime, Pressure_kPa, pressureBaro) %>%
+  na.omit() 
+  
+  df <- wellPT %>% 
+    mutate(pressureGauge = Pressure_kPa - pressureBaro, 
+           waterHeight   = pressureGauge/9.81) 
+  
+  
+  wellDepth <- wellInfo$WellDepth[wellInfo$Well == WELL]
+  
+
+  df <- df %>%
+    mutate(waterHeight2 = waterHeight + offset) %>%
+    mutate(waterDepth = waterHeight2 - wellDepth) 
+  
+  
+  print(wellDepth)
+  print(offset)
+  
+  return(df)
+  
+}
+
 
 ```
 
-Download function
-```{r}
 
-#For one well at a time
+#Change the DL date
+```{r echo = FALSE}
 
-# download_fxn <-function(path, dl_date, well){
-#   DATA <- read_csv(paste(path, dl_date, well, sep = "/"), skip = 1, col_types = list(`Date Time, GMT-04:00` = col_datetime(format = "%m/%d/%y %H:%M:%S %p")))
-#    
-#   names(DATA)[1]<-"Id"
-#   names(DATA)[2]<-"DateTime"
-#   names(DATA)[3]<-"Pressure_kPa"
-#   names(DATA)[4]<-"Temp_C"
-#   
-#   DATA %>% select("Id", "DateTime", "Pressure_kPa", "Temp_C")
-# }
-#   
+#Download date, determines csv folder within "Raw" attached to date loggers were downloaded.
+#COMBINE 10/02/2019 and 01/28/2019. August will need to be combined as well if the logger had been ripped out.
 
+# dl_date1 = "2019_05_22"
+# dl_date2 = "2019_05_29" #needs to be aggregated
+# dl_date2 = "2019_06_04" #needs to be aggregated
+# dl_date1 = "2019_06_18" #needs to be aggregated
+# dl_date1 = "2019_07_02" #needs to be aggregated
+# dl_date2 = "2019_07_19"
+# dl_date3 = "2019_07_22"
+dl_date1 = "2019_10_02"
+dl_date2 = "2020_01_28"
+dl_date3 = "2020_08" ##There is also 5/20 download
+# dl_date1 = "2020_11" NO BAROMETRIC
 
-#For the whole folder
+file_paths1 <- fs::dir_ls(paste(csv_dir, dl_date1, sep = "/"))
+file_paths2 <- fs::dir_ls(paste(csv_dir, dl_date2, sep = "/"))
+file_paths3 <- fs::dir_ls(paste(csv_dir, dl_date3, sep = "/"))
 
-file_paths <- fs::dir_ls(paste(csv_dir, dl_date, sep = "/"))
-#file_contents <- list()
+allPT1 <- file_paths1 %>% map(function (path) {
+    read_csv(path, skip = 3, col_types = list(`Date Time, GMT-05:00` = col_datetime(format = "%m/%d/%y %I:%M:%S %p")))
+    })
 
+allPT2 <- file_paths2 %>% map(function (path) {
+    read_csv(path, skip = 3, col_types = list(`Date Time, GMT-05:00` = col_datetime(format = "%m/%d/%y %I:%M:%S %p")))
+    })
 
-##FOR LOOP OPTION
-# for (i in seq_along(file_paths)) {
-#   file_contents[[i]] <- read_csv(file = file_paths[[i]], skip = 1, col_types = list(`Date Time, GMT-04:00` = col_datetime(format = "%m/%d/%y %H:%M:%S %p")))
-#   
-# }
-# 
-# file_contents <- set_names(file_contents, file_paths)
-# 
-# c<- file_contents$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2019_05_22/86_3_s2.csv`
-# 
-
-
-
-
-###PURR OPTION
-c<- file_paths %>%
-    map(function (path) {
-        read_csv(path, skip = 1, col_types = list(`Date Time, GMT-04:00` = col_datetime(format = "%m/%d/%y %H:%M:%S %p")))
+allPT3 <- file_paths3 %>% map(function (path) {
+    read_csv(path, skip = 3, col_types = list(`Date Time, GMT-05:00` = col_datetime(format = "%m/%d/%y %I:%M:%S %p")))
     })
 
 
+colnames <- c("Id", "DateTime", "Pressure_kPa", "Temp_C")
+allPT1 <- lapply(allPT1, setNames, colnames)
+allPT2 <- lapply(allPT2, setNames, colnames)
+allPT3 <- lapply(allPT3, setNames, colnames)
 
-colnames <- c("Id", "DateTime", "Pressure_kPa", "Temp_C") 
-c <- lapply(c, setNames, colnames)
-
-
-```
-
-Read in raw pressure data
-```{r}
-
-baro <- download_fxn(csv_dir, dl_date, "Barometric.csv") 
-well <- download_fxn(csv_dir, dl_date, "42_2_s1.csv")
-
-
+#, col_types = list(`Date Time, GMT-05:00` = col_datetime(format = "%m/%d/%y %I:%M:%S %p"
 
 ```
 
-Interpolation 
-```{r}
 
-#Interpolation function
-baro_fun <-approxfun(baro$DateTime, baro$Pressure_kPa, method = "linear")
+#Change file directory, well, reference water level date, and function
+```{r echo = TRUE}
 
+#For the august dl, change format of datetime in the csv and use "%m/%d/%y %H:%M" in formating.
 
-df <- well %>% 
-  #Interpolate barometric pressure from loggers
-  mutate(pressureBaro = baro_fun(DateTime)) %>% 
-  #Clean up
-  select(DateTime, Pressure_kPa, pressureBaro)
+baroPT1 <- allPT1$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2019_10_02/Barometric.csv` %>%
+  select(c("Id", "DateTime", "Pressure_kPa", "Temp_C"))%>%
+  na.omit()
 
+baroPT2 <- allPT2$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2020_01_28/Barometric86d1.csv` %>%
+  select(c("Id", "DateTime", "Pressure_kPa", "Temp_C"))%>%
+  na.omit()
 
-df <-df %>% 
-  mutate(pressureGauge = Pressure_kPa - pressureBaro, 
-         waterHeight   = pressureGauge/9.81)
-
-#Estimate waterdepth
-offset = -0.1813 #for October
-df <-df %>% mutate(waterDepth = waterHeight + offset)
+baroPT3 <- allPT3$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2020_08/Barometric.csv` %>%
+  select(c("Id", "DateTime", "Pressure_kPa", "Temp_C"))%>%
+  na.omit()
 
 
-df <-  df %>% mutate(waterDepth2 = replace(waterDepth, waterDepth < -.303, NA))
+baroPT1$DateTime <- as.POSIXct(baroPT1$DateTime, format = "%m/%d/%y %I:%M:%S %p")
+baroPT2$DateTime <- as.POSIXct(baroPT2$DateTime, format = "%m/%d/%y %I:%M:%S %p")
+baroPT3$DateTime <- as.POSIXct(baroPT3$DateTime, format = "%m/%d/%y %H:%M") #%H:$M some need this instead
+
+
+# baroPT1$DateTime <- floor_date(baroPT1$DateTime, "10 mins")
+# baroPT1 <- baroPT1 %>%
+#   group_by(DateTime) %>%
+#   summarize(Pressure_kPa = mean(Pressure_kPa),
+#             Temp_C = mean(Temp_C))
+
+baroPT <- bind_rows(baroPT1, baroPT2)
+baroPT <- bind_rows(baroPT, baroPT3)
+
+
+
+wellPT1 <- allPT1$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2019_10_02/42_4_s3.csv` %>%
+  select(c("Id", "DateTime", "Pressure_kPa", "Temp_C"))
+
+wellPT2 <- allPT2$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2020_01_28/42_4_s3.csv` %>%
+  select(c("Id", "DateTime", "Pressure_kPa", "Temp_C"))
+
+wellPT3 <- allPT3$`/Users/penninoa/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv/2020_08/42_4_s3.csv` %>%
+  select(c("Id", "DateTime", "Pressure_kPa", "Temp_C"))
+
+wellPT1$DateTime <- as.POSIXct(wellPT1$DateTime, format = "%m/%d/%y %I:%M:%S %p")
+wellPT2$DateTime <- as.POSIXct(wellPT2$DateTime, format = "%m/%d/%y %I:%M:%S %p")
+wellPT3$DateTime <- as.POSIXct(wellPT3$DateTime, format = "%m/%d/%y %I:%M:%S %p")#%H:%M some need this instead
+
+
+# wellPT1$DateTime <- floor_date(wellPT1$DateTime, "10 mins")
+# wellPT1 <- wellPT1 %>%
+#   group_by(DateTime) %>%
+#   summarize(Pressure_kPa = mean(Pressure_kPa),
+#             Temp_C = mean(Temp_C))
+
+
+wellPT <- bind_rows(wellPT1, wellPT2)
+wellPT <- bind_rows(wellPT, wellPT3)
+
+
+WELL = "42_4_s3"
+DATE = "2019_10_02"
+
+
+offset <- offset_fun(WELL, DATE, baroPT1, wellPT1, log)
+df <- pt_fun(baroPT, wellPT, offset, wellInfo)
+  
 
 df %>%
   ggplot(aes(x = DateTime, y = waterHeight)) +
   geom_line() +
-  geom_hline(yintercept = 0, linetype="dashed", 
+  geom_hline(yintercept = 0, linetype="dashed",
                 color = "red", size=0.5) +
-  ylab("Water table height (m)") +
-  ggtitle("Depth to logger: .30 m") +
-  theme_classic(base_size = 14) 
+  ylab("Height, meters") +
+  ggtitle("Water table height (uncorrected)") +
+  theme_classic(base_size = 14)
 
 df %>%
-  ggplot(aes(x = DateTime, y = waterDepth2)) +
+  ggplot(aes(x = DateTime, y = waterHeight2)) +
+  geom_line() +
+  geom_hline(yintercept = 0, linetype="dashed",
+                color = "red", size=0.5) +
+  ylab("Height, meters") +
+  ggtitle("Water table height (corrected)") +
+  theme_classic(base_size = 14)
+
+df %>%
+  ggplot(aes(x = DateTime, y = waterDepth)) +
   geom_line() +
   geom_hline(yintercept = 0, linetype="dashed", 
                 color = "red", size=0.5) +
-  ylab("Depth (m)") +
-  ggtitle("Depth to Water table") +
+  ylab("Depth, meters") +
+  ggtitle("Depth to Water table (corrected)") +
   theme_classic(base_size = 14) 
 
 
-df %>%
-  ggplot(aes(x = Pressure_kPa, y = pressureBaro, color = DateTime)) +
-  geom_point() +
-  theme_classic()
-
-
-
 ```
+
 
 
 ```{r}
+#If the logger was ripped out. Check log!!
+# df <- df %>%
+#  mutate(waterDepth = replace(waterDepth, DateTime > ymd_hms("2019-07-18 00:00:00") & DateTime < ymd_hms("2019-10-01 16:00:00"), NA))
 
-x <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/42_2_s1.csv", col_types = list(`Date Time` = col_datetime(format = "%m/%d/%Y %H:%M")))
+0.875-0.007
+
+df <- df %>% 
+  mutate(waterDepth_m = replace(waterDepth, waterDepth < -0.868, NA)) 
 
 
-
-
-x %>%
-  filter(`Date Time` > "2019-07-19 00:00:00" & `Date Time` < "2019-10-03 00:00:00") %>%
-  ggplot(aes(x = `Date Time`, y = -`Water Level (meters)`)) +
+df %>%
+  ggplot(aes(x = DateTime, y = waterDepth_m)) +
   geom_line() +
   geom_hline(yintercept = 0, linetype="dashed", 
                 color = "red", size=0.5) +
-  ylab("Water depth from surface (m)") +
-  ggtitle("42_2_s1: flooding???") 
-  theme_classic() +
-  labs(subtitle = "Dotted line = soil surface")+
-  ylab("Water table height (cm)") 
+  ylab("Depth, meters") +
+  ggtitle("FINAL: Depth to Water table (corrected)") +
+  theme_classic(base_size = 14) 
+
 
 ```
 
+
+#For removing artifacts of water sitting at the bottom of the well. Add this value to CodeCorrections worksheet
+```{r}
+
+#For the deployments, look a little more critically for getting rid of artifacts and when loggers were pulled out.
+
+DATE1 = "2019-08-12 00:00:00"
+DATE2 = "2019-10-03 00:00:00"
+DATE3 = "2020-01-27 00:00:00"
+DATE4 = "2020-05-20 00:00:00"
+
+df1 <- df %>% filter(DateTime <= DATE2 & DateTime >= DATE1)
+df2 <- df %>% filter(DateTime <= DATE3 & DateTime >= DATE2)
+df3 <- df %>% filter(DateTime <= DATE4 & DateTime >= DATE3)
+
+df1.1 <- df1 %>%
+  mutate(waterDepth_m = replace(waterDepth, waterDepth < -0.29, NA))
+
+plot(df1.1$DateTime, df1.1$waterDepth_m, type = "p")
+
+
+```
+
+
+#Write out the csv. CHANGE DATE. FIX WATER TABLE HEIGHT
+```{r}
+
+df <- subset(df, select = -c(waterHeight))
+
+df <- df %>% 
+  rename( waterHeight_raw = waterHeight2,
+          waterDepth_raw = waterDepth)
+
+df$waterHeight_m = (-0.875 - df$waterDepth_m)* -1
+
+
+plot(df$DateTime, df$waterHeight_m, type = "l")
+
+
+out_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s3"
+
+write_csv(df, paste(out_dir, "2020_06_27.csv", sep = "/"))
+
+
+```
+
+
+Add all logging dates together.
+```{r}
+
+# x1 <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s1/2019_06_04")
+# x2 <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s1/2019_06_18")
+# x3 <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s1/2019_07_19")
+# x <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/52_4_s3/2020_06_27.csv", 
+#                col_types = list(waterDepth_m = col_double()))
+
+# x <- bind_rows(x1, x2)
+# x <- bind_rows(x, x3)
+# x <- bind_rows(x, x4)
+
+# 
+# plot(x$DateTime, x$waterDepth_m, type = "l")
+# 
+# x$waterHeight_m <- x$waterDepth_m + 0.739
+# x <- x %>% select(-c(waterHeight, waterHeight2, waterDepth))
+# 
+# 
+# 
+# out_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/52_4_s3"
+# 
+# write_csv(x, paste(out_dir, "Updated_52_4_s3.csv", sep = "/"))
+
+
+```
 

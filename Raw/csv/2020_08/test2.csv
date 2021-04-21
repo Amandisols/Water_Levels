@@ -1,0 +1,7 @@
+﻿"Plot Title: 86_3_s1"
+"#","Date Time, GMT-04:00","Abs Pres, kPa (LGR S/N: 10766686, SEN S/N: 10766686, LBL: pressure)","Temp, °C (LGR S/N: 10766686, SEN S/N: 10766686, LBL: temp)","Coupler Detached (LGR S/N: 10766686, SEN S/N: 10766686)","Coupler Attached (LGR S/N: 10766686, SEN S/N: 10766686)","Host Connected (LGR S/N: 10766686, SEN S/N: 10766686)","Stopped (LGR S/N: 10766686, SEN S/N: 10766686)","End Of File (LGR S/N: 10766686, SEN S/N: 10766686)"
+1,08/11/20 09:18:31 AM,94.697,13.461,,,,,
+2,08/11/20 09:18:54 AM,,,Logged,,,,
+3,08/11/20 09:19:02 AM,,,,Logged,,,
+4,08/11/20 09:19:10 AM,,,,,Logged,,
+5,08/11/20 09:19:17 AM,,,,,,Logged,Logged
