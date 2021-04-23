@@ -23,7 +23,7 @@ DATE5 = "2020-08-12 00:00:00"
 ```
 
 ```{r}
-df <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s2/2020_06_27.csv", col_types = list(waterDepth_m = col_double(), 
+df <- read_csv("~/Documents/VT/Data/MyData/Code/Water_Levels/processed/42_4_s2/2020_06_27.csv", col_types = list(waterDepth_m = col_double(), 
      waterHeight_m = col_double()))
 
 plot(df$DateTime, df$waterDepth_m, type = "l")

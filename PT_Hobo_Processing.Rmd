@@ -20,7 +20,7 @@ library(data.table)
 ```{r}
 #Convert all raw .hobo files in HOBO software to .csv through batch export. Save in "Raw" under date the files were downloaded.
 
-csv_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Raw/csv"
+csv_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/raw/csv"
 
 
 #Read in log of manual field measurements.
@@ -303,7 +303,7 @@ df$waterHeight_m = (-0.875 - df$waterDepth_m)* -1
 plot(df$DateTime, df$waterHeight_m, type = "l")
 
 
-out_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/Processed/42_4_s3"
+out_dir <- "~/Documents/VT/Data/MyData/Code/Water_Levels/processed/42_4_s3"
 
 write_csv(df, paste(out_dir, "2020_06_27.csv", sep = "/"))
 
